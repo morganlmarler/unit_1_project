@@ -1,0 +1,149 @@
+/*
+
+Hypothesis
+Schools with higher percentages of African American and Free and Reduced Lunch (frl) are among the lower performing schools
+
+*/
+
+
+/* Create Tables */
+CREATE TABLE `elementary_SQRP2018` (school_id VARCHAR(30), school_name VARCHAR(30), network VARCHAR(30), sqrp_total_points DECIMAL(4,2), sqrp_level_rating INTEGER(30), accountability_status INTEGER(30));
+
+CREATE TABLE `comboschool_SQRP2018` (school_id VARCHAR(30), school_name VARCHAR(30), network VARCHAR(30), sqrp_total_points DECIMAL(4,2), sqrp_level_rating INTEGER(30), accountability_status INTEGER(30));
+
+CREATE TABLE `highschool_SQRP2018` (school_id VARCHAR(30), school_name VARCHAR(30), network VARCHAR(30), sqrp_total_points DECIMAL(4,2), sqrp_level_rating INTEGER(30), accountability_status INTEGER(30));
+
+CREATE TABLE `demographics_racialethnic2018` (school_id VARCHAR(30), school_name VARCHAR(30), network VARCHAR(30), total_students INTEGER(30), white DECIMAL(4,2), african_american DECIMAL(4,2), native DECIMAL(4,2), hispanic DECIMAL(4,2), multi_racial DECIMAL(4,2), asian DECIMAL(4,2), pacific_islander DECIMAL(4,2), not_identified DECIMAL(4,2));
+
+CREATE TABLE `demographics_el_sped` (network VARCHAR(30), school_id VARCHAR(30), school_name VARCHAR(30), total_students INTEGER(30), number_bilingual INTEGER(30), percent_bilingual DECIMAL(5,2), number_sped INTEGER(30), percent_sped DECIMAL(5,2), number_frl INTEGER(30), percent_frl DECIMAL(5,2));
+
+/* Inserted data via import function on Cloud 9 */
+
+/* Query Data to verify creation of table and insert of data was done correctly */
+SELECT * FROM demographics_racialethnic2018 ORDER BY school_id;
+SELECT * FROM elementary_SQRP2018 ORDER BY school_id;
+SELECT * FROM comboschool_SQRP2018 ORDER BY school_id;
+SELECT * FROM demographics_el_sped ORDER BY school_id;
+
+/* Create table via a union to put all schools (elementary_SQRP2018, comboschool_SQRP2018, and highschool_SQRP2018) on the same table */
+SELECT school_id, school_name, network, sqrp_total_points, sqrp_level_rating, accountability_status FROM `comboschool_SQRP2018`
+UNION
+SELECT school_id, school_name, network, sqrp_total_points, sqrp_level_rating, accountability_status FROM `elementary_SQRP2018`
+UNION
+SELECT school_id, school_name, network, sqrp_total_points, sqrp_level_rating, accountability_status FROM `highschool_SQRP2018`
+ORDER BY sqrp_total_points DESC;
+
+/* Query Data for exploration*/
+
+SELECT COUNT( school_id )
+FROM  `allschools_SQRP2018`
+
+/* 615 */
+
+
+/* Finding out how many schools have a sqrp_level_rating of 'Level 1+' */
+SELECT COUNT( school_id )
+FROM  `allschools_SQRP2018`
+WHERE sqrp_level_rating ='Level 1+';
+
+/* 192 */
+
+
+SELECT COUNT( school_id )
+FROM  `allschools_SQRP2018`
+WHERE sqrp_level_rating ='Level 1+'OR 'Level 1';
+/* 192 */
+
+/* Using the query above returned the same number (192) which shows that SQL is counting all schools that are Level 1+ or Level 1 - How do I just have it count the Level 1+? */
+
+/* What is the max percent of african_american and which school? */
+
+SELECT MAX(`african_american`) AS Highest_percent_african_american FROM `demographics_racialethnic2018`;
+SELECT MAX(`african_american`),school_id, school_name AS Highest_percent_african_american FROM `demographics_racialethnic2018`;
+
+/*answer Albany Park Multicultural Academy 99.9% */
+
+/* How many schools have 90% or higher african_american or hispanic */
+
+SELECT COUNT(african_american)
+FROM `demographics_racialethnic2018`
+WHERE african_american > '90';
+
+/* 240 */
+
+SELECT COUNT(hispanic)
+FROM `demographics_racialethnic2018`
+WHERE hispanic > '90';
+
+/* 108 */
+
+/* Maybe it would be helpful to insert the counts for each ethnicity */
+
+
+/* What is the average sqrp_total_points */
+
+SELECT AVG(`sqrp_total_points`)
+FROM `allschools_SQRP2018`;
+
+/* 3.489919 */
+
+/* I want to create a table with comboschool_SQRP2018, highschool_SQRP2018, and elementary_SQRP2018 all on one table */
+
+CREATE TABLE allschools_SQRP2018 SELECT school_id, school_name, network, sqrp_total_points, sqrp_level_rating, accountability_status
+FROM `comboschool_SQRP2018`
+UNION
+SELECT school_id, school_name, network, sqrp_total_points, sqrp_level_rating, accountability_status
+FROM `elementary_SQRP2018`
+UNION
+SELECT school_id, school_name, network, sqrp_total_points, sqrp_level_rating, accountability_status
+FROM `highschool_SQRP2018`
+ORDER BY sqrp_total_points DESC
+
+
+/* I noticed that there may be more rows in the allschools_SQRP2018 tables than in the other tables */
+SELECT school_name, COUNT(*) FROM `allschools_SQRP2018` GROUP BY `school_name`;
+SELECT school_name, COUNT(*) FROM `allschools_SQRP2018` GROUP BY school_name HAVING COUNT(*) > 1;
+SELECT school_id, COUNT(*) FROM `allschools_SQRP2018` GROUP BY school_id HAVING COUNT(*) > 1;
+
+/* There were no duplicates returned */
+
+/* Queries to look at the relationship between SQRP and demographics_el_sped and demographics_racialethnic2018 */
+CREATE TABLE DEMO_SQRP
+SELECT allschools_SQRP2018.school_id, demographics_racialethnic2018.african_american, demographics_racialethnic2018.hispanic, allschools_SQRP2018.sqrp_level_rating
+FROM allschools_SQRP2018
+INNER JOIN  demographics_racialethnic2018 ON allschools_SQRP2018.school_id=demographics_racialethnic2018.school_id
+ORDER BY `african_american` DESC;
+
+
+CREATE TABLE SPEDEL_SQRP
+SELECT allschools_SQRP2018.school_id, demographics_el_sped.percent_bilingual, demographics_el_sped.percent_sped, demographics_el_sped.percent_frl,allschools_SQRP2018.sqrp_level_rating
+FROM allschools_SQRP2018
+INNER JOIN  demographics_el_sped ON allschools_SQRP2018.school_id=demographics_el_sped.school_id
+ORDER BY `sqrp_level_rating` DESC;
+
+
+SELECT * FROM `SPEDEL_SQRP` WHERE `sqrp_level_rating`= "Level 3";
+/* There are 7 schools with Level 3 status 610506 609722 610133 609845 609939 400045 609961
+All have > 83% FRL but low EL and sped */
+
+SELECT * FROM `DEMO_SQRP` WHERE `sqrp_level_rating`= "Level 3";
+
+/* There are 7 schools with Level 3 status which aligns with the previous query and the schools have >85% african american and one of the schools has 13% hispanic but the rest are <10% hispanic 610506, 400045, 609845, 609722, 609939, 610133, 609961
+
+
+/* Looking at the schools with the lowest level ratings have high percentage of frl and high african_american populations.  To continue this project I would continue to look at the correlation between ethnicity and the schools with higher level rating.  Then continuing this to look at the networks (geographic) that those schools are within */
+
+/*Queries that did not work */
+CREATE TABLE `school_master2018`
+SELECT * FROM `allschools_SQRP2018`
+LEFT JOIN `demographics_el_sped` ON allschools_SQRP2018.school_id=demographics_el_sped.school_id
+LEFT JOIN `demographics_racialethnic2018` ON allschools_SQRP2018.school_id=demographics_racialethnic2018.school_id;
+
+
+
+CREATE TABLE `school_master2018`
+SELECT allschools_SQRP2018.*,
+demographics_el_sped.total_students,demographics_el_sped.number_bilingual, demographics_el_sped.percent_bilingual, demographics_el_sped.number_sped, demographics_el_sped.percent_sped, demographics_el_sped.number_frl, demographics_el_sped.percent_frl,
+demographics_racialethnic2018.white, demographics_racialethnic2018.african_american, demographics_racialethnic2018.native, demographics_racialethnic2018.hispanic, demographics_racialethnic2018.multi_racial, demographics_racialethnic2018.asian, demographics_racialethnic2018.pacific_islander, demographics_racialethnic2018.not_identified, demographics_racialethnic2018.asian_pacificislander
+LEFT JOIN demographics_el_sped ON allschools_SQRP2018.school_id=demographics_el_sped.school_id
+LEFT JOIN demographics_racialethnic2018 ON allschools_SQRP2018.school_id=demographics_racialethnic2018.school_id;
